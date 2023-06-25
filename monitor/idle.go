@@ -8,10 +8,6 @@ import (
 
 type IdleMonitor struct{}
 
-func Idle() *IdleMonitor {
-	return &IdleMonitor{}
-}
-
 func (im *IdleMonitor) Start() (err error) {
 	icon, err := os.ReadFile("icons/robot-idle.ico")
 	if err != nil {

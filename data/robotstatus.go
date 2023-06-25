@@ -2,6 +2,11 @@ package data
 
 import "fmt"
 
+const TASK_STATUS_FAILED = "FAIL"
+
+const ROBOT_STATE_PASSING = "PASSING"
+const ROBOT_STATE_FAILED = "FAILED"
+
 type Task struct {
 	Name   string `json:"name"`
 	Status string `json:"status"`
@@ -21,4 +26,13 @@ func (rs *RobotStatus) TasksStatus() (tasksStatus map[string]uint16) {
 
 func (rs *RobotStatus) String() string {
 	return fmt.Sprint(rs.TasksStatus())
+}
+
+func (rs *RobotStatus) GetState() string {
+	for _, task := range rs.Tasks {
+		if task.Status == TASK_STATUS_FAILED {
+			return ROBOT_STATE_FAILED
+		}
+	}
+	return ROBOT_STATE_PASSING
 }
