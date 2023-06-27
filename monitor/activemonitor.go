@@ -5,12 +5,11 @@ import (
 	"time"
 )
 
-type FileSource interface {
-	GetContent() ([]byte, error)
-}
-
-type Parser interface {
-	Parse([]byte) (data.RobotStatus, error)
+type RobotStatusSource interface {
+	StatusChannel() chan data.RobotStatus
+	ErrorChannel() chan error
+	Stop()
+	Start(time.Duration)
 }
 
 type ActiveUI interface {
@@ -19,25 +18,21 @@ type ActiveUI interface {
 }
 
 type ActiveMonitor struct {
-	Rate       time.Duration
-	FileSource FileSource
-	Parser     Parser
-	UI         ActiveUI
-	stop       chan struct{}
+	Rate              time.Duration
+	RobotStatusRource RobotStatusSource
+	UI                ActiveUI
 }
 
-func (am *ActiveMonitor) Start() error {
-	am.stop = make(chan struct{})
-	ticker := time.NewTicker(am.Rate)
-
-	// TODO: make filesource return a channel and let it implement watching
+func (activeMonitor *ActiveMonitor) Start() error {
+	robotStatusSource := activeMonitor.RobotStatusRource
+	robotStatusSource.Start(activeMonitor.Rate)
 	go func() {
 		for {
 			select {
-			case <-ticker.C:
-				am.updateIcon()
-			case <-am.stop:
-				ticker.Stop()
+			case status := <-robotStatusSource.StatusChannel():
+				activeMonitor.UI.ShowRobotStatus(status)
+			case err := <-robotStatusSource.ErrorChannel():
+				activeMonitor.UI.ShowError(err.Error())
 				return
 			}
 		}
@@ -46,24 +41,6 @@ func (am *ActiveMonitor) Start() error {
 	return nil
 }
 
-func (am *ActiveMonitor) Stop() {
-	am.stop <- struct{}{}
-}
-
-func (am *ActiveMonitor) updateIcon() {
-	robotStatus, err := am.getRobotStatus()
-	if err != nil {
-		am.UI.ShowError(err.Error())
-	} else {
-		am.UI.ShowRobotStatus(robotStatus)
-	}
-}
-
-func (am *ActiveMonitor) getRobotStatus() (robotStatus data.RobotStatus, err error) {
-	content, err := am.FileSource.GetContent()
-	if err != nil {
-		return
-	}
-
-	return am.Parser.Parse(content)
+func (activeMonitor *ActiveMonitor) Stop() {
+	activeMonitor.RobotStatusRource.Stop()
 }
