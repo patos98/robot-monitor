@@ -9,10 +9,16 @@ type MenuItemConfig struct {
 }
 
 func (systrayUI *SystrayUI) initMenu() {
+	systrayUI.startMenuItem = systrayUI.addMenuItem(MenuItemConfig{
+		title:   "Start",
+		tooltip: "Start monitoring robot file",
+		onClick: func() { systrayUI.startChannel <- struct{}{} },
+	})
+
 	systrayUI.stopMenuItem = systrayUI.addMenuItem(MenuItemConfig{
 		title:   "Stop",
 		tooltip: "Stop monitoring robot file",
-		onClick: func() { systrayUI.onStopChannel <- struct{}{} },
+		onClick: func() { systrayUI.stopChannel <- struct{}{} },
 	})
 
 	systrayUI.addMenuItem(MenuItemConfig{

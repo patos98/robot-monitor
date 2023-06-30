@@ -31,7 +31,7 @@ func (DefaultSystrayIcons) Idle() []byte {
 }
 
 func (DefaultSystrayIcons) Error() []byte {
-	return idleIcon
+	return errorIcon
 }
 
 func (DefaultSystrayIcons) ForStatus(status data.RobotStatus) (icon []byte, err error) {

@@ -8,14 +8,17 @@ import (
 
 type SystrayUI struct {
 	icons         SystrayIcons
-	onStopChannel chan struct{}
+	startChannel  chan struct{}
+	stopChannel   chan struct{}
+	startMenuItem *systray.MenuItem
 	stopMenuItem  *systray.MenuItem
 }
 
 func SysTray(icons SystrayIcons) *SystrayUI {
 	return &SystrayUI{
-		icons:         icons,
-		onStopChannel: make(chan struct{}),
+		icons:        icons,
+		startChannel: make(chan struct{}),
+		stopChannel:  make(chan struct{}),
 	}
 }
 
@@ -31,10 +34,13 @@ func (systrayUI *SystrayUI) Run(onReady func()) {
 
 func (systrayUI *SystrayUI) ShowIdleStatus() {
 	systrayUI.stopMenuItem.Hide()
+	systrayUI.startMenuItem.Show()
 	updateSysTrayIcon(systrayUI.icons.Idle(), "Click to set robot file to monitor.")
 }
 
 func (systrayUI *SystrayUI) ShowRobotStatus(robotStatus data.RobotStatus) {
+	systrayUI.stopMenuItem.Show()
+	systrayUI.startMenuItem.Hide()
 	icon, err := systrayUI.icons.ForStatus(robotStatus)
 	if err != nil {
 		systrayUI.ShowError(err.Error())
@@ -48,8 +54,12 @@ func (systrayUI *SystrayUI) ShowError(errorMessage string) {
 	updateSysTrayIcon(systrayUI.icons.Error(), errorMessage)
 }
 
+func (s *SystrayUI) StartChannel() chan struct{} {
+	return s.startChannel
+}
+
 func (s *SystrayUI) StopChannel() chan struct{} {
-	return s.onStopChannel
+	return s.stopChannel
 }
 
 func updateSysTrayIcon(icon []byte, tooltip string) {

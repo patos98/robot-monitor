@@ -15,6 +15,7 @@ type UI interface {
 	ShowRobotStatus(data.RobotStatus)
 	ShowError(string)
 	ShowIdleStatus()
+	StartChannel() chan struct{}
 	StopChannel() chan struct{}
 }
 
@@ -51,6 +52,12 @@ func initializeApp() App {
 		for range app.ui.StopChannel() {
 			app.monitor.Stop()
 			app.ui.ShowIdleStatus()
+		}
+	}()
+
+	go func() {
+		for range app.ui.StartChannel() {
+			app.monitor.Start()
 		}
 	}()
 
