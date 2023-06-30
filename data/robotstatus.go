@@ -16,20 +16,29 @@ type RobotStatus struct {
 	Tasks []Task `json:"tasks"`
 }
 
-func (rs *RobotStatus) TasksStatus() (tasksStatus map[string]uint16) {
+func (robotStatus *RobotStatus) TasksStatus() (tasksStatus map[string]uint16) {
 	tasksStatus = make(map[string]uint16)
-	for _, task := range rs.Tasks {
+	for _, task := range robotStatus.Tasks {
 		tasksStatus[task.Status] += 1
 	}
 	return
 }
 
-func (rs *RobotStatus) String() string {
-	return fmt.Sprint(rs.TasksStatus())
+func (robotStatus *RobotStatus) String() string {
+	return fmt.Sprint(robotStatus.TasksStatus())
 }
 
-func (rs *RobotStatus) GetState() string {
-	for _, task := range rs.Tasks {
+func (robotStatus *RobotStatus) GetFirstFailedTask() string {
+	for _, task := range robotStatus.Tasks {
+		if task.Status == TASK_STATUS_FAILED {
+			return task.Name
+		}
+	}
+	return ""
+}
+
+func (robotStatus *RobotStatus) GetState() string {
+	for _, task := range robotStatus.Tasks {
 		if task.Status == TASK_STATUS_FAILED {
 			return ROBOT_STATE_FAILED
 		}
