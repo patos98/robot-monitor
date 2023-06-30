@@ -12,6 +12,8 @@ import (
 
 type UI interface {
 	Run(func())
+	ShowRobotStatus(data.RobotStatus)
+	ShowError(string)
 	ShowIdleStatus() error
 	OnStopChannel() chan struct{}
 }
@@ -19,6 +21,8 @@ type UI interface {
 type Monitor interface {
 	Start() error
 	Stop()
+	StatusChannel() chan data.RobotStatus
+	ErrorChannel() chan error
 }
 
 type App struct {
@@ -32,32 +36,39 @@ func main() {
 }
 
 func initializeApp() App {
-	systrayUI := ui.SysTray(ui.SystrayUIConfig{
-		IdleIconPath:  "icons/robot-idle.ico",
-		ErrorIconPath: "./icons/robot-error.ico",
-		IconPathsByState: map[string]string{
-			data.ROBOT_STATE_PASSING: "./icons/robot-passing.ico",
-			data.ROBOT_STATE_FAILED:  "./icons/robot-failed.ico",
-		},
-	})
-
-	statusSource := statussource.File(statussource.FileStatusSourceConfig{
-		FileSource: filesource.Local("F:/Users/szpat/Downloads/robot-monitor/tasks-status.json"),
-		Parser:     parser.JSON(),
-		Rate:       1 * time.Second,
-	})
-
-	statusMonitor := monitor.New(statusSource, systrayUI)
-
 	app := App{
-		ui:      systrayUI,
-		monitor: statusMonitor,
+		ui: ui.SysTray(ui.SystrayUIConfig{
+			IdleIconPath:  "icons/robot-idle.ico",
+			ErrorIconPath: "./icons/robot-warning.ico",
+			IconPathsByState: map[string]string{
+				data.ROBOT_STATE_PASSING: "./icons/robot-passing.ico",
+				data.ROBOT_STATE_FAILED:  "./icons/robot-failed.ico",
+			},
+		}),
+		monitor: monitor.New(
+			statussource.File(statussource.FileStatusSourceConfig{
+				FileSource: filesource.Local("F:/Users/szpat/Downloads/robot-monitor/tasks-status.json"),
+				Parser:     parser.JSON(),
+				Rate:       1 * time.Second,
+			}),
+		),
 	}
 
 	go func() {
-		for range systrayUI.OnStopChannel() {
+		for range app.ui.OnStopChannel() {
 			app.monitor.Stop()
 			app.ui.ShowIdleStatus()
+		}
+	}()
+
+	go func() {
+		for {
+			select {
+			case status := <-app.monitor.StatusChannel():
+				app.ui.ShowRobotStatus(status)
+			case err := <-app.monitor.ErrorChannel():
+				app.ui.ShowError(err.Error())
+			}
 		}
 	}()
 

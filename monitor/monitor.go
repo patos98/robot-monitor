@@ -15,16 +15,18 @@ type UI interface {
 }
 
 type Monitor struct {
-	statusSource StatusSource
-	ui           UI
-	stopChannel  chan struct{}
+	statusSource  StatusSource
+	statusChannel chan data.RobotStatus
+	errorChannel  chan error
+	stopChannel   chan struct{}
 }
 
-func New(statusSource StatusSource, ui UI) *Monitor {
+func New(statusSource StatusSource) *Monitor {
 	return &Monitor{
-		statusSource: statusSource,
-		ui:           ui,
-		stopChannel:  make(chan struct{}),
+		statusSource:  statusSource,
+		statusChannel: make(chan data.RobotStatus),
+		errorChannel:  make(chan error),
+		stopChannel:   make(chan struct{}),
 	}
 }
 
@@ -35,9 +37,9 @@ func (monitor *Monitor) Start() error {
 		for {
 			select {
 			case status := <-statusSource.StatusChannel():
-				monitor.ui.ShowRobotStatus(status)
+				monitor.statusChannel <- status
 			case err := <-statusSource.ErrorChannel():
-				monitor.ui.ShowError(err.Error())
+				monitor.errorChannel <- err
 			case <-monitor.stopChannel:
 				return
 			}
@@ -49,4 +51,12 @@ func (monitor *Monitor) Start() error {
 
 func (monitor *Monitor) Stop() {
 	monitor.stopChannel <- struct{}{}
+}
+
+func (monitor *Monitor) StatusChannel() chan data.RobotStatus {
+	return monitor.statusChannel
+}
+
+func (monitor *Monitor) ErrorChannel() chan error {
+	return monitor.errorChannel
 }
