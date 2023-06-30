@@ -14,8 +14,8 @@ type UI interface {
 	Run(func())
 	ShowRobotStatus(data.RobotStatus)
 	ShowError(string)
-	ShowIdleStatus() error
-	OnStopChannel() chan struct{}
+	ShowIdleStatus()
+	StopChannel() chan struct{}
 }
 
 type Monitor interface {
@@ -37,14 +37,7 @@ func main() {
 
 func initializeApp() App {
 	app := App{
-		ui: ui.SysTray(ui.SystrayUIConfig{
-			IdleIconPath:  "icons/robot-idle.ico",
-			ErrorIconPath: "./icons/robot-warning.ico",
-			IconPathsByState: map[string]string{
-				data.ROBOT_STATE_PASSING: "./icons/robot-passing.ico",
-				data.ROBOT_STATE_FAILED:  "./icons/robot-failed.ico",
-			},
-		}),
+		ui: ui.SysTray(ui.DefaultSystrayIcons{}),
 		monitor: monitor.New(
 			statussource.File(statussource.FileStatusSourceConfig{
 				FileSource: filesource.Local("F:/Users/szpat/Downloads/robot-monitor/tasks-status.json"),
@@ -55,7 +48,7 @@ func initializeApp() App {
 	}
 
 	go func() {
-		for range app.ui.OnStopChannel() {
+		for range app.ui.StopChannel() {
 			app.monitor.Stop()
 			app.ui.ShowIdleStatus()
 		}
