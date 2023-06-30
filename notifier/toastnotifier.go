@@ -4,22 +4,29 @@ import (
 	"github.com/go-toast/toast"
 )
 
-type Notification struct {
-	Title   string
-	Message string
+type Notification interface {
+	Title() string
+	Message() string
 }
 
-type Toast struct {
-	AppID    string
-	IconPath string
+type ToastNotifier struct {
+	appID    string
+	iconPath string
 }
 
-func (t *Toast) Notify(notification Notification) error {
+func Toast(appID string, iconPath string) *ToastNotifier {
+	return &ToastNotifier{
+		appID:    appID,
+		iconPath: iconPath,
+	}
+}
+
+func (t *ToastNotifier) Notify(notification Notification) error {
 	toastNotification := toast.Notification{
-		AppID:   t.AppID,
-		Icon:    t.IconPath,
-		Title:   notification.Title,
-		Message: notification.Message,
+		AppID:   t.appID,
+		Icon:    t.iconPath,
+		Title:   notification.Title(),
+		Message: notification.Message(),
 	}
 
 	return toastNotification.Push()

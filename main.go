@@ -5,13 +5,14 @@ import (
 	"robot-monitor/filesource"
 	"robot-monitor/monitor"
 	"robot-monitor/parser"
-	"robot-monitor/robotstatussource"
+	statussource "robot-monitor/statussource"
 	"robot-monitor/ui"
 	"time"
 )
 
 type UI interface {
-	Run()
+	Run(func())
+	ShowIdleStatus() error
 	OnStopChannel() chan struct{}
 }
 
@@ -21,14 +22,13 @@ type Monitor interface {
 }
 
 type App struct {
-	ui             UI
-	currentMonitor Monitor
+	ui      UI
+	monitor Monitor
 }
 
 func main() {
 	app := initializeApp()
-	app.currentMonitor.Start()
-	app.ui.Run()
+	app.ui.Run(func() { app.monitor.Start() })
 }
 
 func initializeApp() App {
@@ -41,29 +41,23 @@ func initializeApp() App {
 		},
 	})
 
-	idleMonitor := monitor.IdleMonitor{UI: &systrayUI}
+	statusSource := statussource.File(statussource.FileStatusSourceConfig{
+		FileSource: filesource.Local("F:/Users/szpat/Downloads/robot-monitor/tasks-status.json"),
+		Parser:     parser.JSON(),
+		Rate:       1 * time.Second,
+	})
 
-	robotStatusSource := robotstatussource.File(
-		filesource.Local("F:/Users/szpat/Downloads/robot-monitor/tasks-status.json"),
-		parser.JSON(),
-	)
-
-	activeMonitor := monitor.ActiveMonitor{
-		Rate:              1 * time.Second,
-		RobotStatusRource: &robotStatusSource,
-		UI:                &systrayUI,
-	}
+	statusMonitor := monitor.New(statusSource, systrayUI)
 
 	app := App{
-		ui:             &systrayUI,
-		currentMonitor: &activeMonitor,
+		ui:      systrayUI,
+		monitor: statusMonitor,
 	}
 
 	go func() {
 		for range systrayUI.OnStopChannel() {
-			app.currentMonitor.Stop()
-			app.currentMonitor = &idleMonitor
-			app.currentMonitor.Start()
+			app.monitor.Stop()
+			app.ui.ShowIdleStatus()
 		}
 	}()
 

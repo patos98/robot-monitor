@@ -2,14 +2,14 @@ package filesource
 
 import "os"
 
-type LocalFileSource struct {
-	path string
+type FileSourceFn func() ([]byte, error)
+
+func Local(path string) FileSourceFn {
+	return FileSourceFn(func() ([]byte, error) {
+		return os.ReadFile(path)
+	})
 }
 
-func Local(path string) LocalFileSource {
-	return LocalFileSource{path: path}
-}
-
-func (lfs LocalFileSource) GetContent() ([]byte, error) {
-	return os.ReadFile(lfs.path)
+func (fileSourceFn FileSourceFn) GetContent() ([]byte, error) {
+	return fileSourceFn()
 }

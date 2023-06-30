@@ -20,28 +20,29 @@ type SystrayUI struct {
 	quitMenuItem  *systray.MenuItem
 }
 
-func SysTray(config SystrayUIConfig) SystrayUI {
-	return SystrayUI{
+func SysTray(config SystrayUIConfig) *SystrayUI {
+	return &SystrayUI{
 		config:        config,
 		onStopChannel: make(chan struct{}),
 	}
 }
 
-func (s *SystrayUI) Run() {
+func (systrayUI *SystrayUI) Run(onReady func()) {
 	systray.Run(
 		func() {
-			s.stopMenuItem = systray.AddMenuItem("Stop", "Stop monitoring robot file")
+			systrayUI.stopMenuItem = systray.AddMenuItem("Stop", "Stop monitoring robot file")
 			go func() {
 				for {
-					<-s.stopMenuItem.ClickedCh
-					s.onStopChannel <- struct{}{}
+					<-systrayUI.stopMenuItem.ClickedCh
+					systrayUI.onStopChannel <- struct{}{}
 				}
 			}()
-			s.quitMenuItem = systray.AddMenuItem("Quit", "Quit the whole app")
+			systrayUI.quitMenuItem = systray.AddMenuItem("Quit", "Quit the whole app")
 			go func() {
-				<-s.quitMenuItem.ClickedCh
+				<-systrayUI.quitMenuItem.ClickedCh
 				systray.Quit()
 			}()
+			onReady()
 		},
 		func() {},
 	)
