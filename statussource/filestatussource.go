@@ -41,6 +41,7 @@ func File(config FileStatusSourceConfig) *FileStatusSource {
 				return
 			default:
 				statusSource.loadRobotStatus()
+				time.Sleep(config.Rate)
 			}
 		}
 	}()
