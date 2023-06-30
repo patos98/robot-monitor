@@ -5,21 +5,13 @@ import (
 	"net/http"
 )
 
-type RemoteFileSource struct {
-	url string
-}
+func Remote(url string) FileSourceFn {
+	return FileSourceFn(func() (content []byte, err error) {
+		resp, err := http.Get(url)
+		if err != nil {
+			return
+		}
 
-func Remote(url string) RemoteFileSource {
-	return RemoteFileSource{
-		url: url,
-	}
-}
-
-func (remoteFileSource RemoteFileSource) GetContent() (content []byte, err error) {
-	resp, err := http.Get(remoteFileSource.url)
-	if err != nil {
-		return
-	}
-
-	return io.ReadAll(resp.Body)
+		return io.ReadAll(resp.Body)
+	})
 }
