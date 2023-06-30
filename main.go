@@ -4,8 +4,10 @@ import (
 	"robot-monitor/data"
 	"robot-monitor/filesource"
 	"robot-monitor/monitor"
+	"robot-monitor/notificationsender"
+	"robot-monitor/notifier"
 	"robot-monitor/parser"
-	statussource "robot-monitor/statussource"
+	"robot-monitor/statussource"
 	"robot-monitor/ui"
 	"time"
 )
@@ -26,9 +28,20 @@ type Monitor interface {
 	ErrorChannel() chan error
 }
 
+type Notifier interface {
+	ShouldNotify(data.RobotStatus) bool
+	Notify(notifier.Sender) error
+}
+
+type NotificationConfig struct {
+	notifiers           []Notifier
+	notificationSenders []notifier.Sender
+}
+
 type App struct {
-	ui      UI
-	monitor Monitor
+	ui                  UI
+	monitor             Monitor
+	notificationConfigs []NotificationConfig
 }
 
 func main() {
@@ -46,6 +59,10 @@ func initializeApp() App {
 				Rate:       1 * time.Second,
 			}),
 		),
+		notificationConfigs: []NotificationConfig{{
+			notifiers:           []Notifier{notifier.FirstFailed()},
+			notificationSenders: []notifier.Sender{notificationsender.Toast("Robot monitor")},
+		}},
 	}
 
 	go func() {
@@ -66,6 +83,15 @@ func initializeApp() App {
 			select {
 			case status := <-app.monitor.StatusChannel():
 				app.ui.ShowRobotStatus(status)
+				for _, notificationConfig := range app.notificationConfigs {
+					for _, notifier := range notificationConfig.notifiers {
+						if notifier.ShouldNotify(status) {
+							for _, sender := range notificationConfig.notificationSenders {
+								notifier.Notify(sender)
+							}
+						}
+					}
+				}
 			case err := <-app.monitor.ErrorChannel():
 				app.ui.ShowError(err.Error())
 			}

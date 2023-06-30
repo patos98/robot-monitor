@@ -1,4 +1,4 @@
-package robotstatussource
+package statussource
 
 import (
 	"robot-monitor/data"
